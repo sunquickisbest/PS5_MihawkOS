@@ -1,0 +1,15 @@
+From: PS5_Proton <local>
+Subject: [PATCH] gpu-broker: draw the on-screen virtual keyboard over the display buffer
+
+--- a/tooling/gpu-broker/display.cpp
++++ b/tooling/gpu-broker/display.cpp
+@@ -47,2 +47,3 @@
+ }
++extern "C" void pw_osk_draw(uint8_t *target);
+ uint64_t now_ns() { timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return uint64_t(t.tv_sec)*1000000000u+t.tv_nsec; }
+@@ -168,3 +169,4 @@
+         }
+         if(cursor_x>=0 && cursor_y>=0)draw_cursor(target,cursor_x,cursor_y);
++        pw_osk_draw(target);
+     };
+

@@ -16,6 +16,7 @@ extern "C" {
 #endif
 #include "../src/proton_touchpad.h"
 #include "../src/pw_controls.h"
+#include "../src/pw_osk.h"
 #include "../src/pw_setup.h"
 #include "../src/pw_runtime_check.h"
 #include "../src/pw_sha256.h"
@@ -2735,9 +2736,11 @@ void proton_run_wine()
     const auto controls_path = proton_controls_path();
     const int controls_error = pw_controls_load(&controls, controls_path.c_str());
     if (controls_error && controls_error != ENOENT) say("Controls: could not read saved mappings (%d); using defaults", controls_error);
-    say("Controls: left=%s right=%s middle=%s", pw_controls_button_id(controls.button[0]),
-        pw_controls_button_id(controls.button[1]), pw_controls_button_id(controls.button[2]));
+    say("Controls: left=%s right=%s middle=%s pointer=%s", pw_controls_button_id(controls.button[0]),
+        pw_controls_button_id(controls.button[1]), pw_controls_button_id(controls.button[2]),
+        pw_controls_pointer_id(controls.pointer_mode));
     pw_controls_mouse mouse{};
+    pw_osk_init(&g_pw_osk);
     // A USB keyboard and mouse (native/pw_usb_input_ps5.h): loaded here, after the /data grant, which needs the
     // title single-threaded; each load and open is logged, and a device plugged in later is found within 3 s.
     PwUsbInputPs5 usb{};
@@ -3192,18 +3195,30 @@ void proton_run_wine()
             if (pressed & PAD_CROSS) steamcmd_key(PW_STEAMCMD_KEY_ENTER);
             if (pressed & PAD_CIRCLE) steamcmd_key(PW_STEAMCMD_KEY_ESCAPE);
         }
+        PwWineInput osk_events[4];
+        const unsigned osk_count = pw_osk_update(&g_pw_osk, &shown_pad, usb.keyboards, osk_events,
+                                                 sizeof(osk_events) / sizeof(osk_events[0]),
+                                                 (uint32_t)monotonic_ms());
+        for (unsigned i = 0; i < osk_count; ++i) deliver(&osk_events[i]);
+
         struct pad gamepad{};
-        pw_controls_gamepad(&controls, &shown_pad, &gamepad);
+        pw_controls_gamepad(&controls, &mouse, &shown_pad, &gamepad);
+        if (pw_osk_is_active(&g_pw_osk)) {
+            gamepad.held = 0;
+            gamepad.pressed = 0;
+            gamepad.left_x = gamepad.left_y = gamepad.right_x = gamepad.right_y = 0.f;
+            gamepad.l2 = gamepad.r2 = 0.f;
+        }
         PwWinePad state{};
         state.connected = gamepad.connected;
         for (size_t i = 0; i < sizeof(ps_buttons)/sizeof(ps_buttons[0]); ++i)
             if (gamepad.held & ps_buttons[i]) state.buttons |= xi_buttons[i];
         state.left_trigger = std::clamp(gamepad.l2, 0.f, 1.f) * 255;
         state.right_trigger = std::clamp(gamepad.r2, 0.f, 1.f) * 255;
-        state.thumb_lx = std::clamp(shown_pad.left_x, -1.f, 1.f) * 32767;
-        state.thumb_ly = -std::clamp(shown_pad.left_y, -1.f, 1.f) * 32767;
-        state.thumb_rx = std::clamp(shown_pad.right_x, -1.f, 1.f) * 32767;
-        state.thumb_ry = -std::clamp(shown_pad.right_y, -1.f, 1.f) * 32767;
+        state.thumb_lx = std::clamp(gamepad.left_x, -1.f, 1.f) * 32767;
+        state.thumb_ly = -std::clamp(gamepad.left_y, -1.f, 1.f) * 32767;
+        state.thumb_rx = std::clamp(gamepad.right_x, -1.f, 1.f) * 32767;
+        state.thumb_ry = -std::clamp(gamepad.right_y, -1.f, 1.f) * 32767;
         if (set_pad) set_pad(&state);
         uint8_t report[64];
         proton_dualsense_report(&gamepad, tick, report);
@@ -3212,7 +3227,7 @@ void proton_run_wine()
             say("Wine: pad connected=%d buttons=%#x touch=%u", pad.connected, pad.held, pad.touch_count);
         was_connected = pad.connected;
         PwWineInput events[4];
-        const unsigned event_count = pw_controls_update(&controls, &mouse, &shown_pad, events);
+        const unsigned event_count = pw_osk_is_active(&g_pw_osk) ? 0 : pw_controls_update(&controls, &mouse, &shown_pad, events);
         for (unsigned i = 0; i < event_count; ++i) deliver(&events[i]);
         PwWineInput usb_events[PW_USB_KEYBOARD_EVENTS + PW_USB_MOUSE_EVENTS];
         const unsigned usb_count = pw_usb_input_ps5_poll(&usb, tick, usb_events,

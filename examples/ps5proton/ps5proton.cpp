@@ -323,8 +323,9 @@ class VulkanExample : public ps5ui::KitExample
 
 	void syncControls()
 	{
+		controlsList.item(0).subtitle = pw_controls_pointer_label(controls.pointer_mode);
 		for (unsigned i = 0; i < 3; ++i)
-			controlsList.item(i).subtitle = pw_controls_button_label(controls.button[i]);
+			controlsList.item(i + 1).subtitle = pw_controls_button_label(controls.button[i]);
 	}
 
 	// The library's rows: the Steam row first, then each game; first: the focus starts on the first game below Steam.
@@ -558,8 +559,9 @@ class VulkanExample : public ps5ui::KitExample
 			controls = changed;
 			controlsNotice = "Saved. Applies to every game you launch.";
 			feedback.play(hui::audio::Cue::saved);
-			proton_say("Controls: %s left=%s right=%s middle=%s", ps5.frameBudget ? "preview" : "saved", pw_controls_button_id(controls.button[0]),
-				pw_controls_button_id(controls.button[1]), pw_controls_button_id(controls.button[2]));
+			proton_say("Controls: %s left=%s right=%s middle=%s pointer=%s", ps5.frameBudget ? "preview" : "saved", pw_controls_button_id(controls.button[0]),
+				pw_controls_button_id(controls.button[1]), pw_controls_button_id(controls.button[2]),
+				pw_controls_pointer_id(controls.pointer_mode));
 		}
 		syncControls();
 	}
@@ -722,12 +724,18 @@ class VulkanExample : public ps5ui::KitExample
 					}  // About (2) is read where it is
 					break;
 				case Page::controls:
-					if (controlsList.focus() == 3) {
+					if (controlsList.focus() == 0) {
+						pw_controls changed = controls;
+						changed.pointer_mode = (changed.pointer_mode == PW_POINTER_LEFT_STICK)
+							? PW_POINTER_TOUCHPAD
+							: PW_POINTER_LEFT_STICK;
+						saveControls(changed);
+					} else if (controlsList.focus() == 4) {
 						pw_controls defaults;
 						pw_controls_defaults(&defaults);
 						saveControls(defaults);
 					} else {
-						mouseAction = controlsList.focus();
+						mouseAction = controlsList.focus() - 1;
 						page = Page::buttons;
 						buttonList.set_focus(controls.button[mouseAction]);
 						buttonList.enter();
@@ -1079,13 +1087,13 @@ class VulkanExample : public ps5ui::KitExample
 		} else if (configuring) {
 			paint.heading("Mouse controls", 1240, y, 38, look.text);
 			y += 65;
-			paragraph(paint, "Move the pointer with the touchpad. Choose a controller button for each mouse click.",
+			paragraph(paint, "Move the pointer with the touchpad or left stick. Choose a controller button for each mouse click.",
 				1240, y, 24, look.text_muted);
 			y += 30;
-			paragraph(paint, "Assigned buttons send mouse clicks instead of gamepad presses. Each button can have one assignment.",
+			paragraph(paint, "Assigned buttons send mouse clicks instead of gamepad presses. Double-click by pressing twice.",
 				1240, y, 24, look.text_muted);
 			y += 30;
-			paragraph(paint, "Choices are saved for all games. Restore defaults to use the touchpad for left click.",
+			paragraph(paint, "Choices are saved for all games. Restore defaults to reset all controls.",
 				1240, y, 24, look.text_muted);
 			y += 30;
 			paragraph(paint, controlsNotice, 1240, y, 24, look.text);
@@ -1363,7 +1371,7 @@ public:
 		rows.push_back(item);
 		settingsList.set_items(rows);
 		rows.clear();
-		for (const char *label : {"Left mouse click", "Right mouse click", "Middle mouse click", "Restore defaults"}) {
+		for (const char *label : {"Pointer movement", "Left mouse click", "Right mouse click", "Middle mouse click", "Restore defaults"}) {
 			item = {};
 			item.title = label;
 			rows.push_back(item);

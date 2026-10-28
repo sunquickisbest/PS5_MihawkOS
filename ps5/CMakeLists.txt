@@ -207,6 +207,7 @@ add_library(samples OBJECT
 	${ROOT}/src/pw_sha256.c
 	${ROOT}/src/pw_pe_arch.c
 	${ROOT}/src/pw_controls.c
+	${ROOT}/src/pw_osk.c
 	${ROOT}/src/pw_game_mode.c
 	${ROOT}/src/pw_high_refresh.c
 	${ROOT}/src/pw_controller.c

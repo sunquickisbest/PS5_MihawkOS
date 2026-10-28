@@ -46,6 +46,7 @@ declare -A sources=(
     [test_proton_dualsense]=""
     [test_proton_touchpad]=""
     [test_pw_controls]="src/pw_controls.c"
+    [test_pw_osk]="src/pw_osk.c"
     [test_pw_usb_input]="src/pw_usb_input.c"
     [test_pw_game_mode]="src/pw_game_mode.c"
     [test_pw_high_refresh]="src/pw_high_refresh.c"
