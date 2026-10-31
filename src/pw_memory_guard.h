@@ -45,10 +45,14 @@ extern "C" {
  * kernel's ~1039 at the signed-in peak, swap-out 64 to 113 MiB). 990 sits 49 MiB under the kernel's limit as the freeze it exists
  * for (1026 of 989 on 2026-10-11) is a few seconds of climb at 15-36 MiB/s, so the end mark is 20 MiB past it and the steep rule
  * (a rise of 120 MiB in 8 s to within 10 MiB of the limit) stays armed. A game that wants less says so with PROTON_SYSTEM_MEMORY_LIMIT. */
-#define PW_MEMORY_GUARD_LAST_RESORT_END_MARGIN_MIB 20u
+#define PW_MEMORY_GUARD_LAST_RESORT_MIB 11200u /* unlocked: full application pool (was 990u) */
+#define PW_MEMORY_GUARD_LAST_RESORT_END_MARGIN_MIB 500u
 /* The old firmware-only marks (the notice at 800/1700, the limit at 990/1800) and the measurements behind them are in git
  * history before the memory plan; pw_memory_marks_for replaces them. */
+#define PW_MEMORY_GUARD_SWAP_NOTICE_MIB 800u
+#define PW_MEMORY_GUARD_SWAP_NOTICE_13_MIB 1700u
 #define PW_MEMORY_GUARD_FIRMWARE_MIN 0x12u   /* the version word's high byte, as BCD: 12.00 and later */
+#define PW_MEMORY_GUARD_LIMIT_13_MIB 11200u  /* unlocked: full application pool (was 1800u) */
 #define PW_MEMORY_GUARD_END_MARGIN_MIB 70u   /* how far past it a game is ended at once */
 #define PW_MEMORY_GUARD_WINDOW_MS 30000u     /* the window the limit is counted over */
 #define PW_MEMORY_GUARD_CLOSE_MS 20000u      /* how long at the limit, within it, asks the game to close */
